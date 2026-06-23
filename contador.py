@@ -63,11 +63,21 @@ except Exception as e:
 # 3. Encabezado
 st.title("Resultados de Conteo")
 
-# 4. Cargador de archivos
-uploaded_file = st.file_uploader("Sube la imagen del cultivo de arándanos", type=["jpg", "jpeg", "png"])
+# 4. Selector de fuente de imagen (Pestañas)
+tab1, tab2 = st.tabs(["📁 Subir desde Galería", "📸 Tomar Foto"])
 
-if uploaded_file is not None:
-    input_image = Image.open(uploaded_file)
+with tab1:
+    uploaded_file = st.file_uploader("Elige una imagen de tu galería", type=["jpg", "jpeg", "png"])
+
+with tab2:
+    camera_file = st.camera_input("Toma una foto del cultivo")
+
+# Determinar qué imagen usar (la que no esté vacía)
+input_image_file = uploaded_file if uploaded_file is not None else camera_file
+
+# Si hay una imagen (ya sea de galería o cámara), procedemos con el análisis
+if input_image_file is not None:
+    input_image = Image.open(input_image_file)
     
     # Inferencia
     results = model(input_image, conf=0.25)
@@ -78,8 +88,6 @@ if uploaded_file is not None:
     st.image(predicted_image, caption="Resultado del análisis YOLO", use_container_width=True)
     
     # 5. CONTEO CON TUS CATEGORÍAS EXACTAS
-    # Nota: Las mayúsculas y minúsculas deben ser idénticas a como las entrenaste.
-    # Por lo que veo en tu foto, "Verde" y "Maduro" inician con mayúscula.
     conteo_clases = {
         "Pinton": 0,
         "Verde": 0,
@@ -94,7 +102,6 @@ if uploaded_file is not None:
             class_id = int(box.cls[0].item())
             class_name = yolo_names[class_id]
             
-            # Si la clase detectada está en nuestro diccionario, sumamos 1
             if class_name in conteo_clases:
                 conteo_clases[class_name] += 1
 
@@ -106,7 +113,7 @@ if uploaded_file is not None:
             return 0.0
         return round((valor / total) * 100, 1)
 
-    # 7. Tabla HTML actualizada con tus nombres y los valores del diccionario
+    # 7. Tabla HTML actualizada
     html_content = f"""
     <div class="metric-container">
         <div class="metric-row header">
@@ -142,6 +149,7 @@ if uploaded_file is not None:
     # 8. Botones
     col1, col2 = st.columns(2)
     with col1:
+        # st.rerun() reinicia la app limpiando las imágenes
         if st.button("Start again", use_container_width=True, type="primary"):
             st.rerun()
     with col2:
